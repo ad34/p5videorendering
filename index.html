@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>p5.js Audio Visualization</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>
+    <script src="https://rawgit.com/spite/ccapture.js/master/build/CCapture.all.min.js"></script>
+</head>
+<body>
+    <button id="startButton">Start</button>
+
+    <button id="stopButton">Stop</button>
+
+    <script>
+        let song;
+        let amp;
+        let width = 800;
+        let height = 600;
+        let t = 0;
+        let step = 60
+        let capturer;
+        let canvas;
+
+        function preload() {
+            song = loadSound('/bm.mp3'); // Replace 'song.mp3' with the path to your sound file
+        }
+
+        function setup() {
+            canvas = createCanvas(width, height);
+            noStroke();
+            fill(40, 200, 40);
+
+            amp = new p5.Amplitude();
+
+            let startButton = select('#startButton');
+            startButton.mousePressed(() => {
+                song.play();
+                capturer = new CCapture({ format: 'webm', framerate: 30 });
+                capturer.start();
+            });
+
+            let stopButton = select('#stopButton');
+            stopButton.mousePressed(() => song.stop());
+        }
+
+        function draw() {
+            background(0);
+
+            if (song.isPlaying()) {
+                let vol = amp.getLevel();
+                let diam = map(vol, 0, 0.3, 10, 200);
+
+                // make a x and y grid of ellipses
+                for (let x = 0; x <= width; x = x + step) {
+                for (let y = 0; y <= height; y = y + step) {
+                    // starting point of each circle depends on mouse position
+                    const xAngle = map(vol*width, 0, width, -4 * PI, 4 * PI, true);
+                    const yAngle = map(vol*height, 0, height, -4 * PI, 4 * PI, true);
+                    // and also varies based on the particle's location
+                    const angle = xAngle * (x / width) + yAngle * (y / height);
+
+                    // each particle moves in a circle
+                    const myX = x + 20 * cos(2 * PI * t + angle);
+                    const myY = y + 20 * sin(2 * PI * t + angle);
+
+                     // map x and y to a range of color values
+                        let r = map(x, 0, width, 0, 255);
+                        let g = map(y, 0, height, 0, 255);
+                        let b = map((x + y) / 2, 0, (width + height) / 2, 0, 255);
+
+                        fill(r, g, b); // set fill color
+
+
+                    ellipse(myX, myY, 30); // draw particle
+                }
+                }
+
+                t = t + .1; // update time
+                capturer.capture(canvas.canvas);
+            }
+        }
+        
+        function keyPressed() {
+            if (key == 's' || key == 'S') {
+                capturer.stop();
+                capturer.save();
+                console.log('capture downloaded');
+            }
+        }
+
+    </script>
+</body>
+</html>
